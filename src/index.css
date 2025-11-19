@@ -1,0 +1,155 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* Light Mode - Clean White Background */
+    --background: 0 0% 100%;
+    --foreground: 0 0% 9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 9%;
+
+    /* Primary - Deep Blue */
+    --primary: 220 70% 35%;
+    --primary-foreground: 0 0% 98%;
+    --primary-light: 220 50% 70%;
+    --primary-dark: 220 70% 25%;
+
+    /* Secondary - Teal */
+    --secondary: 180 60% 45%;
+    --secondary-foreground: 0 0% 98%;
+    --secondary-light: 180 50% 70%;
+
+    /* Accent - Light Teal/Cyan */
+    --accent: 180 70% 55%;
+    --accent-foreground: 220 20% 15%;
+    --accent-light: 180 60% 85%;
+
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 45%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 0 0% 89%;
+    --input: 0 0% 89%;
+    --ring: 220 70% 35%;
+
+    --radius: 1rem;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(220 70% 35%) 0%, hsl(180 60% 45%) 100%);
+    --gradient-soft: linear-gradient(180deg, hsl(0 0% 98%) 0%, hsl(180 40% 96%) 100%);
+    --gradient-focus: linear-gradient(135deg, hsl(220 70% 25%) 0%, hsl(220 70% 35%) 50%, hsl(180 60% 45%) 100%);
+    
+    /* Glass effect */
+    --glass-bg: hsla(0, 0%, 100%, 0.8);
+    --glass-border: hsla(0, 0%, 0%, 0.1);
+    --glass-shadow: 0 8px 32px hsla(0, 0%, 0%, 0.08);
+    
+    /* Transitions */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-spring: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .dark {
+    /* Dark Mode - Deep Dark Background */
+    --background: 0 0% 5%;
+    --foreground: 0 0% 98%;
+
+    --card: 0 0% 8%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 0 0% 8%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 220 60% 60%;
+    --primary-foreground: 220 20% 10%;
+    --primary-light: 220 50% 70%;
+    --primary-dark: 220 70% 25%;
+
+    --secondary: 180 55% 50%;
+    --secondary-foreground: 220 20% 10%;
+    --secondary-light: 180 50% 70%;
+
+    --accent: 180 65% 60%;
+    --accent-foreground: 220 20% 10%;
+    --accent-light: 180 60% 40%;
+
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 60%;
+
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 0 0% 18%;
+    --input: 0 0% 18%;
+    --ring: 220 60% 60%;
+
+    --glass-bg: hsla(0, 0%, 8%, 0.8);
+    --glass-border: hsla(220, 60%, 60%, 0.1);
+    --glass-shadow: 0 8px 32px hsla(0, 0%, 0%, 0.3);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    @apply transition-colors duration-300;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased transition-colors duration-300;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+}
+
+@layer utilities {
+  .glass-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
+  }
+
+  .gradient-primary {
+    background: var(--gradient-primary);
+  }
+
+  .gradient-soft {
+    background: var(--gradient-soft);
+  }
+
+  .gradient-focus {
+    background: var(--gradient-focus);
+  }
+
+  .gradient-text {
+    @apply bg-gradient-to-br from-primary to-secondary bg-clip-text text-transparent;
+  }
+
+  .transition-smooth {
+    transition: var(--transition-smooth);
+  }
+
+  .transition-spring {
+    transition: var(--transition-spring);
+  }
+
+  .hover-scale {
+    @apply transition-transform duration-200 hover:scale-105;
+  }
+}
