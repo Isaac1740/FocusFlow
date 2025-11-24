@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import axios from "axios";
+import { API_URL } from "../config";
 
 interface UserProfile {
   id: number;
@@ -23,12 +24,13 @@ const Profile = () => {
     }
 
     axios
-      .post("http://localhost:5000/api/profile", { user_id })
+      // 🔥 UPDATED: replace localhost with API_URL
+      .post(`${API_URL}/api/profile`, { user_id })
       .then((res) => {
         if (res.data.success) {
           setUser(res.data.user);
 
-          // ✅ Store username & email for Dashboard
+          // Store username & email for Dashboard
           localStorage.setItem("username", res.data.user.username);
           localStorage.setItem("email", res.data.user.email);
         } else {
@@ -60,15 +62,18 @@ const Profile = () => {
     >
       <div className="glass-card rounded-3xl p-8 w-full max-w-md text-center">
         <h1 className="text-3xl font-bold text-primary mb-4">Your Profile</h1>
+
         <div className="space-y-4 text-left">
           <div>
             <p className="text-muted-foreground text-sm">Username</p>
             <p className="text-lg font-semibold">{user.username}</p>
           </div>
+
           <div>
             <p className="text-muted-foreground text-sm">Email</p>
             <p className="text-lg font-semibold">{user.email}</p>
           </div>
+
           <div>
             <p className="text-muted-foreground text-sm">User ID</p>
             <p className="text-lg font-semibold">{user.id}</p>
@@ -77,6 +82,7 @@ const Profile = () => {
 
         <div className="flex gap-4 mt-8 justify-center">
           <Button onClick={() => navigate("/")}>🏠 Back to Home</Button>
+
           <Button
             variant="destructive"
             onClick={() => {

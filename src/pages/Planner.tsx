@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { API_URL } from "../config";
 
 interface TimeBlock {
   id: string;
@@ -33,7 +34,7 @@ const colorOptions = [
   { value: 'hsl(340 75% 60%)', label: 'Pink' },
 ];
 
-const API_BASE = "http://localhost:5000";
+const API_BASE = API_URL;
 
 const Planner = () => {
   const [currentDate, setCurrentDate] = useState(new Date());

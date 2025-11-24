@@ -6,6 +6,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ProgressRing from "@/components/ProgressRing";
 import { useNavigate } from "react-router-dom";
+import { API_URL } from "../config";
+
 
 interface FocusTask {
   icon: any;
@@ -16,7 +18,7 @@ interface FocusTask {
 }
 
 const iconMap: any = { Coffee, Book, Briefcase, Dumbbell, Heart };
-const API_BASE = "http://localhost:5000";
+const API_BASE = API_URL;
 
 const Dashboard = () => {
   const navigate = useNavigate();

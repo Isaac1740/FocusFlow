@@ -1,5 +1,6 @@
 import React, { useState, useEffect, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
+import { API_URL } from "../config";
 
 const Signup: React.FC = () => {
   const [username, setUsername] = useState<string>("");
@@ -41,7 +42,7 @@ const Signup: React.FC = () => {
     setLoading(true);
 
     try {
-      const res = await fetch("http://localhost:5000/api/signup", {
+      const res = await fetch(`${API_URL}/api/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, email, password }),
