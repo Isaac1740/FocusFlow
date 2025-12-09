@@ -30,10 +30,10 @@ const Signup: React.FC = () => {
     }
   }, []);
 
-  // ✅ If already logged in, redirect to home
+  // ✅ AUTO-REDIRECT — now uses TOKEN instead of wrong 'user'
   useEffect(() => {
-    const user = localStorage.getItem("user");
-    if (user) navigate("/");
+    const token = localStorage.getItem("token");
+    if (token) navigate("/");
   }, [navigate]);
 
   // 🚀 Handle signup
@@ -55,7 +55,7 @@ const Signup: React.FC = () => {
         alert("Signup successful! Please log in.");
         navigate("/login");
       } else {
-        alert(data.message); // e.g. "User already exists"
+        alert(data.message);
       }
     } catch (err) {
       setLoading(false);

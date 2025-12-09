@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { API_URL } from "../config";
+import { useNavigate } from "react-router-dom";
 
 interface TimeBlock {
   id: string;
@@ -34,13 +35,12 @@ const colorOptions = [
   { value: 'hsl(340 75% 60%)', label: 'Pink' },
 ];
 
-const API_BASE = API_URL;
-
 const Planner = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [timeBlocks, setTimeBlocks] = useState<TimeBlock[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingBlock, setEditingBlock] = useState<TimeBlock | null>(null);
+  const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
     time: '09:00',
@@ -52,17 +52,33 @@ const Planner = () => {
 
   const fmt = (d: Date) => d.toISOString().split("T")[0];
 
+  // 🔐 redirect if token missing
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      toast.error("Please log in first.");
+      navigate("/login");
+    }
+  }, []);
+
+  // 🔥 Load tasks with JWT
   const loadTasks = () => {
     const user_id = localStorage.getItem("user_id");
-    if (!user_id) return;
+    const token = localStorage.getItem("token");
+    if (!user_id || !token) return;
+
     const dateStr = fmt(currentDate);
 
-    fetch(`${API_BASE}/api/get_tasks?user_id=${user_id}&date=${dateStr}`)
+    fetch(`${API_URL}/api/get_tasks?user_id=${user_id}&date=${dateStr}`, {
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    })
       .then(res => res.json())
       .then(data => {
         if (data.success) {
           const rows = data.tasks as any[];
-          const mapped = rows.map(r => ({
+          setTimeBlocks(rows.map(r => ({
             id: String(r.id),
             date: r.date,
             time: r.time,
@@ -70,8 +86,7 @@ const Planner = () => {
             icon: r.icon,
             color: r.color,
             duration: r.duration
-          }));
-          setTimeBlocks(mapped);
+          })));
         }
       })
       .catch(() => toast.error("Failed to load tasks"));
@@ -80,8 +95,7 @@ const Planner = () => {
   useEffect(() => { loadTasks(); /* eslint-disable-next-line */ }, [currentDate]);
 
   const getIcon = (iconName: string) => {
-    const found = iconOptions.find(opt => opt.value === iconName);
-    return found ? found.icon : Book;
+    return iconOptions.find(opt => opt.value === iconName)?.icon || Book;
   };
 
   const navigateDay = (direction: 'prev' | 'next') => {
@@ -95,15 +109,19 @@ const Planner = () => {
   const resetToToday = () => setCurrentDate(new Date());
 
   const addOrUpdateBlock = async () => {
-    if (!formData.task.trim()) {
-      toast.error('Please enter a task name');
-      return;
-    }
+    const token = localStorage.getItem("token");
     const user_id = localStorage.getItem("user_id");
-    if (!user_id) {
-      toast.error("User not logged in");
+
+    if (!formData.task.trim()) {
+      toast.error("Please enter a task name");
       return;
     }
+
+    if (!user_id || !token) {
+      toast.error("Not logged in");
+      return;
+    }
+
     const payload = {
       user_id,
       date: fmt(currentDate),
@@ -114,33 +132,51 @@ const Planner = () => {
       duration: formData.duration
     };
 
+    let url = "";
+    let method = "";
+
     if (editingBlock) {
-      const res = await fetch(`${API_BASE}/api/update_task/${editingBlock.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-      const data = await res.json();
-      if (!data.success) return toast.error("Update failed");
-      toast.success("Block updated!");
+      url = `${API_URL}/api/update_task/${editingBlock.id}`;
+      method = "PUT";
     } else {
-      const res = await fetch(`${API_BASE}/api/add_task`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-      const data = await res.json();
-      if (!data.success) return toast.error("Failed to add block");
-      toast.success("Block added!");
+      url = `${API_URL}/api/add_task`;
+      method = "POST";
     }
+
+    const res = await fetch(url, {
+      method,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+
+    if (!data.success) {
+      toast.error(editingBlock ? "Update failed" : "Failed to add block");
+      return;
+    }
+
+    toast.success(editingBlock ? "Block updated!" : "Block added!");
     loadTasks();
     resetForm();
   };
 
   const deleteBlock = async (id: string) => {
-    const res = await fetch(`${API_BASE}/api/delete_task/${id}`, { method: "DELETE" });
+    const token = localStorage.getItem("token");
+
+    const res = await fetch(`${API_URL}/api/delete_task/${id}`, {
+      method: "DELETE",
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    });
+
     const data = await res.json();
     if (!data.success) return toast.error("Delete failed");
+
     toast.success("Block deleted!");
     loadTasks();
   };
@@ -163,6 +199,8 @@ const Planner = () => {
     setIsDialogOpen(false);
   };
 
+  // ---- UI BELOW (UNCHANGED) ----
+
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const today = new Date();
   const isToday = currentDate.toDateString() === today.toDateString();
@@ -175,30 +213,64 @@ const Planner = () => {
       </motion.div>
 
       {/* Date Navigation */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1, duration: 0.5 }} className="glass-card rounded-3xl p-6 mb-6">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1, duration: 0.5 }}
+        className="glass-card rounded-3xl p-6 mb-6"
+      >
         <div className="flex items-center justify-between mb-4">
-          <Button variant="outline" size="icon" onClick={() => navigateDay('prev')} className="rounded-xl"><ChevronLeft className="w-5 h-5" /></Button>
+          <Button variant="outline" size="icon" onClick={() => navigateDay('prev')} className="rounded-xl">
+            <ChevronLeft className="w-5 h-5" />
+          </Button>
           <div className="text-center">
-            <h2 className="text-2xl font-bold text-foreground">{currentDate.toLocaleDateString('en-US', { weekday: 'long' })}</h2>
+            <h2 className="text-2xl font-bold text-foreground">
+              {currentDate.toLocaleDateString('en-US', { weekday: 'long' })}
+            </h2>
             <p className="text-muted-foreground">
-              {currentDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+              {currentDate.toLocaleDateString('en-US', {
+                month: 'long',
+                day: 'numeric',
+                year: 'numeric'
+              })}
             </p>
-            {!isToday && <Button variant="link" onClick={resetToToday} className="text-sm mt-1">Back to Today</Button>}
+            {!isToday && (
+              <Button variant="link" onClick={resetToToday} className="text-sm mt-1">
+                Back to Today
+              </Button>
+            )}
           </div>
-          <Button variant="outline" size="icon" onClick={() => navigateDay('next')} className="rounded-xl"><ChevronRight className="w-5 h-5" /></Button>
+          <Button variant="outline" size="icon" onClick={() => navigateDay('next')} className="rounded-xl">
+            <ChevronRight className="w-5 h-5" />
+          </Button>
         </div>
 
         <div className="flex justify-between items-center gap-2">
           {[-3, -2, -1, 0, 1, 2, 3].map((offset) => {
-            const date = new Date(currentDate); date.setDate(date.getDate() + offset);
+            const date = new Date(currentDate);
+            date.setDate(date.getDate() + offset);
             const isSelected = offset === 0;
             const isTodayDate = date.toDateString() === today.toDateString();
             return (
-              <button key={offset} onClick={() => setCurrentDate(date)} className={`flex-1 text-center py-3 rounded-xl transition-smooth ${
-                isSelected ? 'gradient-primary text-white' : isTodayDate ? 'bg-accent/20 hover:bg-accent/30' : 'hover:bg-accent/10'
-              }`}>
+              <button
+                key={offset}
+                onClick={() => setCurrentDate(date)}
+                className={`flex-1 text-center py-3 rounded-xl transition-smooth ${
+                  isSelected
+                    ? 'gradient-primary text-white'
+                    : isTodayDate
+                    ? 'bg-accent/20 hover:bg-accent/30'
+                    : 'hover:bg-accent/10'
+                }`}
+              >
                 <div className="text-xs md:text-sm font-medium">{weekDays[date.getDay()]}</div>
-                <div className={`text-lg md:text-xl font-bold mt-1 ${isSelected ? 'text-white' : 'text-foreground'}`}>{date.getDate()}</div>
+                <div
+                  className={`text-lg md:text-xl font-bold mt-1 ${
+                    isSelected ? 'text-white' : 'text-foreground'
+                  }`}
+                >
+                  {date.getDate()}
+                </div>
               </button>
             );
           })}
@@ -206,30 +278,53 @@ const Planner = () => {
       </motion.div>
 
       {/* Today's Schedule */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2, duration: 0.5 }} className="space-y-4 mb-6">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2, duration: 0.5 }}
+        className="space-y-4 mb-6"
+      >
         <div className="flex justify-between items-center">
           <h2 className="text-2xl font-semibold text-foreground">Today's Schedule</h2>
 
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="gradient-primary text-white hover:opacity-90 transition-smooth rounded-xl" onClick={() => setEditingBlock(null)}>
+              <Button
+                className="gradient-primary text-white hover:opacity-90 transition-smooth rounded-xl"
+                onClick={() => setEditingBlock(null)}
+              >
                 <Plus className="w-4 h-4 mr-2" /> Add Block
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">
-              <DialogHeader><DialogTitle>{editingBlock ? 'Edit Time Block' : 'Add Time Block'}</DialogTitle></DialogHeader>
+              <DialogHeader>
+                <DialogTitle>{editingBlock ? 'Edit Time Block' : 'Add Time Block'}</DialogTitle>
+              </DialogHeader>
               <div className="space-y-4 mt-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Time</label>
-                  <Input type="time" value={formData.time} onChange={(e) => setFormData(prev => ({ ...prev, time: e.target.value }))} />
+                  <Input
+                    type="time"
+                    value={formData.time}
+                    onChange={(e) => setFormData(prev => ({ ...prev, time: e.target.value }))}
+                  />
                 </div>
+
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Task</label>
-                  <Input placeholder="Enter task name" value={formData.task} onChange={(e) => setFormData(prev => ({ ...prev, task: e.target.value }))} />
+                  <Input
+                    placeholder="Enter task name"
+                    value={formData.task}
+                    onChange={(e) => setFormData(prev => ({ ...prev, task: e.target.value }))}
+                  />
                 </div>
+
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Duration</label>
-                  <Select value={formData.duration} onValueChange={(val) => setFormData(prev => ({ ...prev, duration: val }))}>
+                  <Select
+                    value={formData.duration}
+                    onValueChange={(val) => setFormData(prev => ({ ...prev, duration: val }))}
+                  >
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="30 mins">30 minutes</SelectItem>
@@ -240,16 +335,30 @@ const Planner = () => {
                     </SelectContent>
                   </Select>
                 </div>
+
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Icon</label>
-                  <Select value={formData.icon} onValueChange={(val) => setFormData(prev => ({ ...prev, icon: val }))}>
+                  <Select
+                    value={formData.icon}
+                    onValueChange={(val) => setFormData(prev => ({ ...prev, icon: val }))}
+                  >
                     <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{iconOptions.map(opt => (<SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>))}</SelectContent>
+                    <SelectContent>
+                      {iconOptions.map(opt => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
                   </Select>
                 </div>
+
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Color</label>
-                  <Select value={formData.color} onValueChange={(val) => setFormData(prev => ({ ...prev, color: val }))}>
+                  <Select
+                    value={formData.color}
+                    onValueChange={(val) => setFormData(prev => ({ ...prev, color: val }))}
+                  >
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {colorOptions.map(opt => (
@@ -263,9 +372,17 @@ const Planner = () => {
                     </SelectContent>
                   </Select>
                 </div>
+
                 <div className="flex gap-2">
-                  <Button onClick={addOrUpdateBlock} className="flex-1"><Check className="w-4 h-4 mr-2" />{editingBlock ? 'Update' : 'Add'}</Button>
-                  <Button variant="outline" onClick={resetForm} className="flex-1"><X className="w-4 h-4 mr-2" />Cancel</Button>
+                  <Button onClick={addOrUpdateBlock} className="flex-1">
+                    <Check className="w-4 h-4 mr-2" />
+                    {editingBlock ? 'Update' : 'Add'}
+                  </Button>
+
+                  <Button variant="outline" onClick={resetForm} className="flex-1">
+                    <X className="w-4 h-4 mr-2" />
+                    Cancel
+                  </Button>
                 </div>
               </div>
             </DialogContent>
@@ -276,25 +393,54 @@ const Planner = () => {
           {timeBlocks.length === 0 ? (
             <div className="glass-card rounded-2xl p-12 text-center">
               <p className="text-muted-foreground mb-4">No time blocks for this day</p>
-              <Button onClick={() => setIsDialogOpen(true)}><Plus className="w-4 h-4 mr-2" />Add Your First Block</Button>
+              <Button onClick={() => setIsDialogOpen(true)}>
+                <Plus className="w-4 h-4 mr-2" />Add Your First Block
+              </Button>
             </div>
           ) : (
             timeBlocks.map((block, index) => {
               const Icon = getIcon(block.icon);
               return (
-                <motion.div key={block.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 + index * 0.1, duration: 0.5 }} className="glass-card rounded-2xl p-4 hover:scale-[1.02] transition-all duration-300">
+                <motion.div
+                  key={block.id}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.3 + index * 0.1, duration: 0.5 }}
+                  className="glass-card rounded-2xl p-4 hover:scale-[1.02] transition-all duration-300"
+                >
                   <div className="flex items-center gap-4">
                     <div className="text-lg font-semibold text-muted-foreground w-16">{block.time}</div>
-                    <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: `${block.color}20`, color: block.color }}>
+
+                    <div
+                      className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+                      style={{ backgroundColor: `${block.color}20`, color: block.color }}
+                    >
                       <Icon className="w-6 h-6" />
                     </div>
+
                     <div className="flex-1">
                       <h3 className="font-semibold text-foreground">{block.task}</h3>
                       <p className="text-sm text-muted-foreground">{block.duration}</p>
                     </div>
+
                     <div className="flex gap-2">
-                      <Button variant="ghost" size="sm" className="rounded-lg hover:bg-accent/10" onClick={() => startEdit(block)}><Edit className="w-4 h-4" /></Button>
-                      <Button variant="ghost" size="sm" className="rounded-lg hover:bg-destructive/10 hover:text-destructive" onClick={() => deleteBlock(block.id)}><Trash2 className="w-4 h-4" /></Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="rounded-lg hover:bg-accent/10"
+                        onClick={() => startEdit(block)}
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="rounded-lg hover:bg-destructive/10 hover:text-destructive"
+                        onClick={() => deleteBlock(block.id)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </div>
                   </div>
                 </motion.div>

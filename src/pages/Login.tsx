@@ -1,6 +1,6 @@
 import React, { useState, useEffect, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { API_URL } from "../config";   // ✅ IMPORT API URL
+import { API_URL } from "../config";
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState<string>("");
@@ -15,6 +15,7 @@ const Login: React.FC = () => {
       : "light";
   };
 
+  // Theme setup
   useEffect(() => {
     if (
       localStorage.theme === "dark" ||
@@ -27,19 +28,22 @@ const Login: React.FC = () => {
     }
   }, []);
 
+  // Auto redirect if already logged in
   useEffect(() => {
-    const user_id = localStorage.getItem("user_id");
-    if (user_id) navigate("/");
+    const token = localStorage.getItem("token");
+    if (token) navigate("/");
   }, [navigate]);
 
   const handleLogin = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
+
     try {
-      // ⬇⬇⬇ UPDATED URL ⬇⬇⬇
       const res = await fetch(`${API_URL}/api/login`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json"
+        },
         body: JSON.stringify({ email, password }),
       });
 
@@ -47,10 +51,12 @@ const Login: React.FC = () => {
       setLoading(false);
 
       if (!data.success) {
-        alert(data.message);
+        alert(data.message || "Login failed");
         return;
       }
 
+      // ⭐ Store JWT Token & user info ⭐
+      localStorage.setItem("token", data.token);
       localStorage.setItem("user_id", data.user_id);
       localStorage.setItem("username", data.username);
       localStorage.setItem("email", data.email);

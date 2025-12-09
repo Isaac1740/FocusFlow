@@ -16,28 +16,41 @@ const Profile = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const user_id = localStorage.getItem("user_id");
+    const token = localStorage.getItem("token");
 
-    if (!user_id) {
+    // If no token → redirect
+    if (!token) {
       navigate("/login");
       return;
     }
 
     axios
-      // 🔥 UPDATED: replace localhost with API_URL
-      .post(`${API_URL}/api/profile`, { user_id })
+      .post(
+        `${API_URL}/api/profile`,
+        {}, // no body needed
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      )
       .then((res) => {
         if (res.data.success) {
           setUser(res.data.user);
 
-          // Store username & email for Dashboard
+          // Update localStorage for dashboard usage
           localStorage.setItem("username", res.data.user.username);
           localStorage.setItem("email", res.data.user.email);
+          localStorage.setItem("user_id", String(res.data.user.id));
         } else {
           console.error("Error:", res.data.message);
+          navigate("/login");
         }
       })
-      .catch((err) => console.error("Profile fetch error:", err));
+      .catch((err) => {
+        console.error("Profile fetch error:", err);
+        navigate("/login");
+      });
   }, [navigate]);
 
   if (!user) {
