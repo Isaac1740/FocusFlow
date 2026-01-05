@@ -55,6 +55,38 @@ const Dashboard = () => {
   }, [focusTime]);
 
   /* ================================
+   FETCH PROFILE ON DASHBOARD LOAD
+================================= */
+useEffect(() => {
+  const token = localStorage.getItem("token");
+  if (!token) return;
+
+  const fetchProfile = async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/profile`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        setUsername(data.user.username);
+        localStorage.setItem("username", data.user.username);
+        localStorage.setItem("email", data.user.email);
+      }
+    } catch (err) {
+      console.error("❌ Failed to load profile", err);
+    }
+  };
+
+  fetchProfile();
+}, []);
+
+
+  /* ================================
      LOAD TODAY TASKS (JWT FIXED)
   ================================= */
   const loadToday = async () => {
