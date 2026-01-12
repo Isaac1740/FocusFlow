@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Button } from "@/components/ui/button";
 import axios from "axios";
+
+import { Button } from "@/components/ui/button";
 import { API_URL } from "../config";
 
 interface UserProfile {
@@ -12,46 +13,53 @@ interface UserProfile {
 }
 
 const Profile = () => {
-  const [user, setUser] = useState<UserProfile | null>(null);
   const navigate = useNavigate();
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
 
-    // If no token → redirect
+    // ✅ ONLY check token
     if (!token) {
       navigate("/login");
       return;
     }
 
-    axios.get(`${API_URL}/api/profile`, {
-  headers: {
-    Authorization: `Bearer ${token}`,
-  },
-})
-
+    // ✅ Correct HTTP method: GET
+    axios
+      .get(`${API_URL}/api/profile`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
       .then((res) => {
         if (res.data.success) {
           setUser(res.data.user);
 
-          // Update localStorage for dashboard usage
+          // Optional: keep for dashboard usage
           localStorage.setItem("username", res.data.user.username);
           localStorage.setItem("email", res.data.user.email);
           localStorage.setItem("user_id", String(res.data.user.id));
         } else {
-          console.error("Error:", res.data.message);
           navigate("/login");
         }
       })
       .catch((err) => {
         console.error("Profile fetch error:", err);
         navigate("/login");
+      })
+      .finally(() => {
+        setLoading(false);
       });
   }, [navigate]);
 
-  if (!user) {
+  /* ================================
+     LOADING STATE (NO REDIRECT)
+  ================================= */
+  if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-foreground">
+      <div className="min-h-screen flex items-center justify-center">
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -63,14 +71,24 @@ const Profile = () => {
     );
   }
 
+  /* ================================
+     SAFETY (should not trigger now)
+  ================================= */
+  if (!user) return null;
+
+  /* ================================
+     UI
+  ================================= */
   return (
     <motion.div
-      className="min-h-screen flex flex-col items-center justify-center bg-background transition-colors duration-300 p-6"
+      className="min-h-screen flex items-center justify-center bg-background p-6"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
     >
       <div className="glass-card rounded-3xl p-8 w-full max-w-md text-center">
-        <h1 className="text-3xl font-bold text-primary mb-4">Your Profile</h1>
+        <h1 className="text-3xl font-bold text-primary mb-6">
+          Your Profile
+        </h1>
 
         <div className="space-y-4 text-left">
           <div>
@@ -90,7 +108,9 @@ const Profile = () => {
         </div>
 
         <div className="flex gap-4 mt-8 justify-center">
-          <Button onClick={() => navigate("/")}>🏠 Back to Home</Button>
+          <Button onClick={() => navigate("/")}>
+            🏠 Home
+          </Button>
 
           <Button
             variant="destructive"
