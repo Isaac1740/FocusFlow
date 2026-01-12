@@ -24,16 +24,12 @@ const Profile = () => {
       return;
     }
 
-    axios
-      .post(
-        `${API_URL}/api/profile`,
-        {}, // no body needed
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      )
+    axios.get(`${API_URL}/api/profile`, {
+  headers: {
+    Authorization: `Bearer ${token}`,
+  },
+})
+
       .then((res) => {
         if (res.data.success) {
           setUser(res.data.user);
